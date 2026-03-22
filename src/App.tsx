@@ -60,11 +60,21 @@ export default function App() {
   const [showSidebar, setShowSidebar] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+  const [imgDimensions, setImgDimensions] = useState<{ width: number, height: number } | null>(null);
   const wakeLockRef = useRef<WakeLockSentinel | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
   const unlockTimerRef = useRef<NodeJS.Timeout | null>(null);
   const [unlockProgress, setUnlockProgress] = useState(0);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     const handleFullscreenChange = () => {
@@ -326,6 +336,20 @@ export default function App() {
     }
   );
 
+  const getFitScale = () => {
+    if (!imgDimensions) return 1;
+
+    const { width, height } = imgDimensions;
+    const rad = (state.rotation * Math.PI) / 180;
+
+    // Calculate the dimensions of the rotated bounding box
+    const rotatedWidth = Math.abs(width * Math.cos(rad)) + Math.abs(height * Math.sin(rad));
+    const rotatedHeight = Math.abs(width * Math.sin(rad)) + Math.abs(height * Math.cos(rad));
+
+    // Calculate the scale needed to fit the rotated image within the window
+    return Math.min(windowSize.width / rotatedWidth, windowSize.height / rotatedHeight);
+  };
+
   if (!isLoaded) {
     return <div className="min-h-screen bg-neutral-950 flex items-center justify-center text-neutral-500">Loading workspace...</div>;
   }
@@ -353,13 +377,17 @@ export default function App() {
         {imageUrl ? (
           <motion.img
             src={imageUrl}
+            onLoad={(e) => {
+              const img = e.currentTarget;
+              setImgDimensions({ width: img.naturalWidth, height: img.naturalHeight });
+            }}
             alt="Tracing"
             className="max-w-none origin-center pointer-events-none"
             style={{
               x: state.x,
               y: state.y,
-              scaleX: (Number(state.scale) / 100) * (state.isFlippedHorizontal ? -1 : 1),
-              scaleY: (Number(state.scale) / 100) * (state.isFlippedVertical ? -1 : 1),
+              scaleX: (Number(state.scale) / 100) * getFitScale() * (state.isFlippedHorizontal ? -1 : 1),
+              scaleY: (Number(state.scale) / 100) * getFitScale() * (state.isFlippedVertical ? -1 : 1),
               rotate: state.rotation,
               filter: `brightness(${state.brightness ?? 100}%) contrast(${state.contrast ?? 100}%) ${state.isInverted ? 'invert(100%)' : ''} ${state.isGrayscale ? 'grayscale(100%)' : ''} ${state.isOutlineMode ? 'url(#outline-effect)' : ''} ${state.isStencilMode ? 'url(#stencil-effect)' : ''}`,
             }}
