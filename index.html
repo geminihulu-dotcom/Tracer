@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Google AI Studio App</title>
+    <script>
+      // Prevent Vite's HMR client from force-reloading the page when the proxy drops the idle connection
+      const originalReload = window.location.reload;
+      window.location.reload = function() {
+        console.log("[App] Blocked Vite from automatically reloading the page.");
+      };
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
