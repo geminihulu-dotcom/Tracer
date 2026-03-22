@@ -1,5 +1,5 @@
 {
   "name": "Remix: TracePad Pro",
   "description": "High-precision paper tracing application for tablets with lock mode and state memory.",
-  "requestFramePermissions": []
+  "requestFramePermissions": ["screen-wake-lock"]
 }
