@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { get, set } from 'idb-keyval';
+import AdSense from './components/AdSense';
 import { useGesture } from '@use-gesture/react';
 import { Upload, Lock, Settings2, RotateCw, ZoomIn, RefreshCcw, Info, Sun, RotateCcw, Contrast, FlipHorizontal, FlipVertical, Grid, Maximize, Minimize, Moon, Wand2, Droplet, PenTool, MoveHorizontal, MoveVertical, Layers, Trash2, PanelLeftClose } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -817,6 +818,12 @@ export default function App() {
                 Lock the workspace before tracing. Everything will hide. Tap the screen with <strong>3 fingers</strong> (or press Arrow Up on desktop) to reveal the padlock, then long-press it for 3 seconds to unlock.
               </p>
             </div>
+
+            {/* Google AdSense */}
+            <AdSense
+              client="ca-pub-1658291833727727"
+              slot="XXXXXXXXXX"
+            />
           </motion.div>
         )}
       </AnimatePresence>
