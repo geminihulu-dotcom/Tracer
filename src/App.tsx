@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { get, set } from 'idb-keyval';
 import { useGesture } from '@use-gesture/react';
-import { Upload, Lock, Settings2, RotateCw, ZoomIn, RefreshCcw, Info, Sun, RotateCcw, Contrast, FlipHorizontal, FlipVertical, Grid, Maximize, Minimize, Moon, Wand2, Droplet, PenTool, MoveHorizontal, MoveVertical, Layers, Trash2, PanelLeftClose } from 'lucide-react';
+import { Upload, Lock, Settings2, RotateCw, RotateCcw, ZoomIn, RefreshCcw, Info, Sun, Contrast, FlipHorizontal, FlipVertical, Grid, Maximize, Minimize, Moon, Wand2, Droplet, PenTool, MoveHorizontal, MoveVertical, Layers, Trash2, PanelLeftClose } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface AppState {
@@ -139,13 +139,74 @@ export default function App() {
 
   // Prevent scrolling/pull-to-refresh when locked
   useEffect(() => {
+    if (!isLocked) return;
     const preventScroll = (e: TouchEvent) => {
-      if (isLocked) {
-        e.preventDefault();
-      }
+      e.preventDefault();
     };
     document.addEventListener('touchmove', preventScroll, { passive: false });
     return () => document.removeEventListener('touchmove', preventScroll);
+  }, [isLocked]);
+
+  // Prevent accidental navigation/closing when locked
+  useEffect(() => {
+    if (!isLocked) return;
+
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    const handlePopState = () => {
+      window.history.pushState(null, '', window.location.pathname);
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    window.addEventListener('popstate', handlePopState);
+    window.history.pushState(null, '', window.location.pathname);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [isLocked]);
+
+  // Keep screen awake when locked (Screen Wake Lock API)
+  useEffect(() => {
+    if (!isLocked) return;
+    
+    let wakeLock: any = null;
+    const requestWakeLock = async () => {
+      try {
+        if ('wakeLock' in navigator) {
+          wakeLock = await (navigator as any).wakeLock.request('screen');
+        }
+      } catch (err) {
+        console.warn('Wake Lock request failed', err);
+      }
+    };
+
+    requestWakeLock();
+
+    const handleVisibilityChange = () => {
+      if (wakeLock !== null && document.visibilityState === 'visible') {
+        requestWakeLock();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      if (wakeLock) wakeLock.release();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isLocked]);
+
+  // Prevent context menu when locked
+  useEffect(() => {
+    if (!isLocked) return;
+    const preventContextMenu = (e: MouseEvent) => e.preventDefault();
+    document.addEventListener('contextmenu', preventContextMenu);
+    return () => document.removeEventListener('contextmenu', preventContextMenu);
   }, [isLocked]);
 
   // Listen for 3-finger tap (tablet) or ArrowUp (desktop) to reveal the padlock
@@ -279,6 +340,14 @@ export default function App() {
         setIsLocked(false);
         setShowSidebar(true);
         setUnlockProgress(0);
+        
+        // Try to clean up the history state we pushed
+        try {
+          window.history.back();
+        } catch (e) {
+          console.warn("History back failed", e);
+        }
+
         try {
           if (document.fullscreenElement) {
             document.exitFullscreen();
@@ -295,7 +364,7 @@ export default function App() {
     setShowSidebar(false);
     setShowPadlock(false);
     try {
-      if (!document.fullscreenElement) {
+      if (document.fullscreenEnabled && !document.fullscreenElement) {
         await document.documentElement.requestFullscreen();
       }
     } catch (err) {
